@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/api';
+import { formatIdrInput, parseIdrInput, sanitizeIdrTyping } from '@/lib/currency';
 import { uploadServiceImage, deleteServiceImage } from '@/lib/storage';
 import ImageUpload from './ImageUpload';
 import type { Service, PriceUnit } from '@/types';
@@ -53,7 +54,7 @@ export default function ServiceFormModal({
         setForm({
           name: service.name,
           description: service.description || '',
-          price: String(service.price),
+          price: formatIdrInput(service.price),
           price_unit: service.price_unit,
           is_active: service.is_active,
         });
@@ -77,8 +78,21 @@ export default function ServiceFormModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    const trimmedName = form.name.trim();
+    if (!trimmedName) {
+      setError('Nama layanan wajib diisi.');
+      return;
+    }
+
+    const parsedPrice = parseIdrInput(form.price);
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      setError('Harga harus berupa angka lebih dari 0 (contoh: 40000 atau 40.000).');
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const token = await getToken();
@@ -92,9 +106,9 @@ export default function ServiceFormModal({
       }
 
       const payload = {
-        name: form.name.trim(),
+        name: trimmedName,
         description: form.description.trim() || undefined,
-        price: parseFloat(form.price),
+        price: parsedPrice,
         price_unit: form.price_unit,
         is_active: form.is_active,
         image_url: finalImageUrl,
@@ -136,7 +150,7 @@ export default function ServiceFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
               {error}
@@ -158,7 +172,6 @@ export default function ServiceFormModal({
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
               maxLength={100}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="Cuci Kering"
@@ -184,15 +197,24 @@ export default function ServiceFormModal({
                 Harga *
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                name="service-price"
+                autoComplete="off"
                 value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                required
-                min={1}
-                step={100}
+                onChange={(e) =>
+                  setForm({ ...form, price: sanitizeIdrTyping(e.target.value) })
+                }
+                onBlur={() => {
+                  const parsed = parseIdrInput(form.price);
+                  if (Number.isFinite(parsed) && parsed > 0) {
+                    setForm({ ...form, price: formatIdrInput(parsed) });
+                  }
+                }}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="8000"
+                placeholder="40.000"
               />
+              <p className="mt-1 text-xs text-gray-400">Contoh: 40000 atau 40.000</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
