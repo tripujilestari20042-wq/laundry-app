@@ -29,6 +29,9 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && isAuthRoute) {
+    if (!supabase) {
+      return supabaseResponse;
+    }
     const { data: profileData } = await supabase
       .from('profiles')
       .select('role')
@@ -42,6 +45,9 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && (matchesRoute(pathname, ADMIN_ROUTES) || matchesRoute(pathname, PELANGGAN_ROUTES))) {
+    if (!supabase) {
+      return supabaseResponse;
+    }
     const { data: profileData } = await supabase
       .from('profiles')
       .select('role')

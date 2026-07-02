@@ -1,5 +1,11 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const USING_LOCALHOST_API =
+  !process.env.NEXT_PUBLIC_API_URL ||
+  API_URL.includes('localhost') ||
+  API_URL.includes('127.0.0.1');
+
 interface FetchOptions extends RequestInit {
   token?: string;
 }
@@ -8,8 +14,12 @@ export class ApiConnectionError extends Error {
   readonly isConnectionError = true;
 
   constructor(apiUrl: string = API_URL) {
+    const hint =
+      IS_PRODUCTION && USING_LOCALHOST_API
+        ? ' Set NEXT_PUBLIC_API_URL di Vercel ke URL backend production (Railway/Render).'
+        : '';
     super(
-      `Tidak dapat terhubung ke backend (${apiUrl}). Pastikan server backend sedang berjalan.`
+      `Tidak dapat terhubung ke backend (${apiUrl}). Pastikan server backend sedang berjalan.${hint}`
     );
     this.name = 'ApiConnectionError';
   }

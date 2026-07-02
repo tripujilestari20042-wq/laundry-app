@@ -96,7 +96,13 @@ Pending → Pickup → Processing → Ready → Delivering → Completed
 
 Lihat `.env.example` di folder `frontend/` dan `backend/`.
 
-## Deploy ke Vercel
+## Deploy ke Production
 
-- **Frontend**: Import repo, set root directory ke `frontend/`, tambahkan env vars
-- **Backend**: Deploy ke Railway/Render, set env vars, update `NEXT_PUBLIC_API_URL` di frontend
+Panduan lengkap step-by-step: **[DEPLOY.md](./DEPLOY.md)**
+
+Ringkas:
+
+- **Frontend (Vercel)**: root directory `frontend/`, env vars → `frontend/.env.vercel.example`
+- **Backend (Railway)**: root directory `backend/`, env vars → `backend/.env.railway.example`
+- **Supabase**: jalankan SQL migrations + atur Auth URL + Google provider
+- **Google Cloud**: redirect URI = `https://upekqyrncipkgbpazrzm.supabase.co/auth/v1/callback`
