@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/api';
+import { listOrders } from '@/lib/orders';
 import AdminCancellationReview from '@/components/admin/AdminCancellationReview';
 import type { Order } from '@/types';
 import { LaundryStatusBadge, PaymentStatusBadge } from '@/components/ui/StatusBadge';
@@ -46,7 +47,17 @@ function AdminOrdersContent() {
       setOrders(listRes.data);
       setCancelPendingCount(cancelRes.data.length);
     } catch {
-      setOrders([]);
+      const admin = true;
+      const allOrders = await listOrders(supabase, session.user.id, admin);
+      const filtered =
+        currentFilter === 'all'
+          ? allOrders
+          : allOrders.filter((o) => o.laundry_status === currentFilter);
+      const cancelOrders = allOrders.filter(
+        (o) => o.laundry_status === 'pembatalan_diajukan'
+      );
+      setOrders(filtered as Order[]);
+      setCancelPendingCount(cancelOrders.length);
     } finally {
       setLoading(false);
     }

@@ -104,10 +104,14 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
   let json: unknown = null;
   const text = await response.text();
   if (text) {
+    const trimmed = text.trim();
+    if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+      throw new Error('Endpoint API tidak ditemukan. Tunggu redeploy Vercel selesai.');
+    }
     try {
       json = JSON.parse(text);
     } catch {
-      throw new Error(text || `Respons server tidak valid (HTTP ${response.status})`);
+      throw new Error(text.slice(0, 200) || `Respons server tidak valid (HTTP ${response.status})`);
     }
   }
 

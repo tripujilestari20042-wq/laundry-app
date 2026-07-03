@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/api';
+import { approveOrderCancellation, rejectOrderCancellation } from '@/lib/orders';
 import type { Order } from '@/types';
 import { LAUNDRY_STATUS_LABELS } from '@/types';
 
@@ -90,8 +91,23 @@ export default function AdminCancellationReview({
       );
       setConfirmAction(null);
       onUpdated();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Gagal menyetujui pembatalan');
+    } catch (apiErr) {
+      try {
+        const res = await approveOrderCancellation(supabase, order.id);
+        setMessage(
+          res.refund_message ? `${res.message}. ${res.refund_message}` : res.message
+        );
+        setConfirmAction(null);
+        onUpdated();
+      } catch (fallbackErr) {
+        setMessage(
+          fallbackErr instanceof Error
+            ? fallbackErr.message
+            : apiErr instanceof Error
+              ? apiErr.message
+              : 'Gagal menyetujui pembatalan'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -112,8 +128,21 @@ export default function AdminCancellationReview({
       setMessage(res.message);
       setConfirmAction(null);
       onUpdated();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Gagal menolak pembatalan');
+    } catch (apiErr) {
+      try {
+        const res = await rejectOrderCancellation(supabase, order.id);
+        setMessage(res.message);
+        setConfirmAction(null);
+        onUpdated();
+      } catch (fallbackErr) {
+        setMessage(
+          fallbackErr instanceof Error
+            ? fallbackErr.message
+            : apiErr instanceof Error
+              ? apiErr.message
+              : 'Gagal menolak pembatalan'
+        );
+      }
     } finally {
       setLoading(false);
     }

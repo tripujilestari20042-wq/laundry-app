@@ -223,3 +223,161 @@ export async function requestOrderCancellation(
 
   return data;
 }
+
+const ORDER_SELECT = `
+  *,
+  services (id, name, price, price_unit),
+  profiles (id, full_name, email, phone)
+`;
+
+const ORDER_DETAIL_SELECT = `
+  *,
+  services (id, name, price, price_unit),
+  profiles (id, full_name, email, phone),
+  tracking_status (id, status, notes, created_at)
+`;
+
+export async function listOrders(
+  supabase: SupabaseClient,
+  userId: string,
+  isAdmin: boolean,
+  statusFilter?: string
+) {
+  let query = supabase
+    .from('orders')
+    .select(ORDER_SELECT)
+    .order('created_at', { ascending: false });
+
+  if (!isAdmin) {
+    query = query.eq('customer_id', userId);
+  }
+
+  if (statusFilter) {
+    query = query.eq('laundry_status', statusFilter);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
+}
+
+export async function getOrderById(
+  supabase: SupabaseClient,
+  userId: string,
+  isAdmin: boolean,
+  orderId: string
+) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(ORDER_DETAIL_SELECT)
+    .eq('id', orderId)
+    .single();
+
+  if (error || !data) {
+    throw new Error('Pesanan tidak ditemukan');
+  }
+
+  if (!isAdmin && data.customer_id !== userId) {
+    throw new Error('Akses ditolak');
+  }
+
+  return data;
+}
+
+export async function approveOrderCancellation(
+  supabase: SupabaseClient,
+  orderId: string
+) {
+  const { data: existing, error: fetchError } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchError || !existing) {
+    throw new Error('Pesanan tidak ditemukan');
+  }
+
+  if (existing.laundry_status !== 'pembatalan_diajukan') {
+    throw new Error('Pesanan tidak dalam status pengajuan pembatalan');
+  }
+
+  let paymentStatus = existing.payment_status;
+  let refundMessage: string | null = null;
+
+  if (existing.payment_status === 'paid') {
+    paymentStatus = 'refunded';
+    if (existing.payment_method === 'midtrans' && existing.midtrans_order_id) {
+      refundMessage =
+        'Pembayaran ditandai refunded — proses refund Midtrans via dashboard Midtrans jika diperlukan';
+    } else {
+      refundMessage = 'Pembayaran ditandai refunded — proses pengembalian manual jika diperlukan';
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      laundry_status: 'cancelled',
+      payment_status: paymentStatus,
+      status_before_cancel: null,
+    })
+    .eq('id', orderId)
+    .select(ORDER_SELECT)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    data,
+    message: 'Pembatalan disetujui',
+    refund_message: refundMessage,
+  };
+}
+
+export async function rejectOrderCancellation(
+  supabase: SupabaseClient,
+  orderId: string
+) {
+  const { data: existing, error: fetchError } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchError || !existing) {
+    throw new Error('Pesanan tidak ditemukan');
+  }
+
+  if (existing.laundry_status !== 'pembatalan_diajukan') {
+    throw new Error('Pesanan tidak dalam status pengajuan pembatalan');
+  }
+
+  const restoreStatus = existing.status_before_cancel || 'pending';
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      laundry_status: restoreStatus,
+      cancellation_reason: null,
+      status_before_cancel: null,
+    })
+    .eq('id', orderId)
+    .select(ORDER_SELECT)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    data,
+    message: `Pengajuan pembatalan ditolak. Status kembali ke ${restoreStatus}.`,
+  };
+}

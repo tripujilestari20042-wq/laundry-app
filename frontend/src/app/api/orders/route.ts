@@ -1,8 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/supabase/route-auth';
-import { createCustomerOrder } from '@/lib/orders';
+import { isUserAdmin } from '@/lib/supabase/admin-auth';
+import { createCustomerOrder, listOrders } from '@/lib/orders';
 import type { PaymentMethod } from '@/types';
+
+export async function GET(request: Request) {
+  try {
+    const supabase = await createClient();
+    const user = await getAuthenticatedUser(supabase, request);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Silakan login terlebih dahulu' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const statusFilter = searchParams.get('status') || undefined;
+    const admin = await isUserAdmin(supabase, user.id);
+
+    const data = await listOrders(supabase, user.id, admin, statusFilter);
+    return NextResponse.json({ data });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Gagal memuat pesanan';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
 
 export async function POST(request: Request) {
   try {
