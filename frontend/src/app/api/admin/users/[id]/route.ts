@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/supabase/route-auth';
 import { requireAdmin, AdminAccessError } from '@/lib/supabase/admin-auth';
+import { getSupabaseAdmin } from '@/lib/supabase/admin-client';
 
 export async function GET(
   request: Request,
@@ -111,10 +112,14 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json(
-      { error: 'Hapus pengguna membutuhkan backend Railway dengan SUPABASE_SERVICE_ROLE_KEY.' },
-      { status: 503 }
-    );
+    const adminClient = getSupabaseAdmin();
+    const { error: authError } = await adminClient.auth.admin.deleteUser(id);
+
+    if (authError) {
+      return NextResponse.json({ error: authError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Pengguna berhasil dihapus' });
   } catch (err) {
     if (err instanceof AdminAccessError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
