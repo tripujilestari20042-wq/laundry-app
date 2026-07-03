@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import AddressSearchInput from './AddressSearchInput';
+import { createClient } from '@/lib/supabase/client';
+import { fetchStoreSettings, defaultStoreFromEnv } from '@/lib/catalog';
 import { api } from '@/lib/api';
 import type { Coordinates } from './MapPicker';
 import type { GeocodingResult } from '@/lib/geocoding/nominatim';
@@ -89,9 +91,11 @@ export default function LocationPicker({
   );
 }
 
-export function useStoreLocation() {
-  const [store, setStore] = useState<StoreLocationData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useStoreLocation(initialStore?: StoreLocationData | null) {
+  const supabase = createClient();
+  const hasInitial = initialStore != null;
+  const [store, setStore] = useState<StoreLocationData | null>(initialStore ?? null);
+  const [loading, setLoading] = useState(!hasInitial);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStore = useCallback(async () => {
@@ -99,21 +103,37 @@ export function useStoreLocation() {
     setError(null);
 
     try {
-      const json = await api.get<{ data: StoreLocationData }>('/api/config/store');
-      setStore(json.data);
+      const fromDb = await fetchStoreSettings(supabase);
+      if (fromDb) {
+        setStore(fromDb);
+        return;
+      }
+
+      try {
+        const json = await api.get<{ data: StoreLocationData }>('/api/config/store');
+        setStore(json.data);
+      } catch {
+        setStore(defaultStoreFromEnv());
+      }
     } catch (err) {
-      setStore(null);
+      setStore(defaultStoreFromEnv());
       setError(err instanceof Error ? err.message : 'Gagal memuat lokasi toko');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
+    if (hasInitial) return;
     fetchStore();
-  }, [fetchStore]);
+  }, [hasInitial, fetchStore]);
 
-  return { store, loading, error, retry: fetchStore };
+  return {
+    store: store ?? defaultStoreFromEnv(),
+    loading,
+    error,
+    retry: fetchStore,
+  };
 }
 
 /** Banner peringatan koneksi backend — dipakai di halaman yang butuh data toko */
