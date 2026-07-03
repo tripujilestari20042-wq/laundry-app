@@ -52,7 +52,21 @@ function OrderDetailContent() {
       const res = await api.get<{ data: Order }>(`/api/orders/${orderId}`, session.access_token);
       setOrder(res.data);
     } catch {
-      setOrder(null);
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          services (id, name, price, price_unit),
+          tracking_status (id, status, notes, created_at)
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error || !data) {
+        setOrder(null);
+      } else {
+        setOrder(data as Order);
+      }
     } finally {
       setLoading(false);
     }

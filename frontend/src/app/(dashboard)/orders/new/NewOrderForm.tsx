@@ -175,7 +175,7 @@ export default function NewOrderForm({ initialServices, initialStore }: NewOrder
         });
 
         if (result === 'success' || result === 'pending') {
-          router.push(`/orders/${order.id}?payment=${result}`);
+          router.push(`/orders/success?id=${order.id}&payment=${result}`);
         } else if (result === 'close') {
           router.push(`/orders/${order.id}?payment=cancelled`);
         } else {
@@ -185,7 +185,7 @@ export default function NewOrderForm({ initialServices, initialStore }: NewOrder
         return;
       }
 
-      router.push(`/orders/${order.id}`);
+      router.push(`/orders/success?id=${order.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal membuat pesanan');
       setLoading(false);
