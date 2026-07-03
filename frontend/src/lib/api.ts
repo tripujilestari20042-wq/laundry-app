@@ -1,10 +1,33 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+function resolveApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, '') ?? '';
+  const isLocalBackend =
+    !configured ||
+    configured.includes('localhost') ||
+    configured.includes('127.0.0.1');
+
+  // Production tanpa backend Railway — pakai API bawaan Next.js di Vercel (same origin)
+  if (isLocalBackend && IS_PRODUCTION) {
+    if (typeof window !== 'undefined') {
+      return '';
+    }
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, '');
+    return appUrl ?? '';
+  }
+
+  return configured || 'http://localhost:4000';
+}
+
+const API_URL = resolveApiBaseUrl();
 const USING_LOCALHOST_API =
   !process.env.NEXT_PUBLIC_API_URL ||
-  API_URL.includes('localhost') ||
-  API_URL.includes('127.0.0.1');
+  (process.env.NEXT_PUBLIC_API_URL.includes('localhost') ||
+    process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1'));
+const USES_BUILTIN_VERCEL_API = IS_PRODUCTION && API_URL !== 'http://localhost:4000' &&
+  (!process.env.NEXT_PUBLIC_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL.includes('localhost') ||
+    process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1'));
 
 interface FetchOptions extends RequestInit {
   token?: string;
@@ -14,12 +37,13 @@ export class ApiConnectionError extends Error {
   readonly isConnectionError = true;
 
   constructor(apiUrl: string = API_URL) {
+    const displayUrl = apiUrl || 'API Vercel';
     const hint =
-      IS_PRODUCTION && USING_LOCALHOST_API
+      IS_PRODUCTION && USING_LOCALHOST_API && !USES_BUILTIN_VERCEL_API
         ? ' Set NEXT_PUBLIC_API_URL di Vercel ke URL backend production (Railway/Render).'
         : '';
     super(
-      `Tidak dapat terhubung ke backend (${apiUrl}). Pastikan server backend sedang berjalan.${hint}`
+      `Tidak dapat terhubung ke server (${displayUrl}). Pastikan koneksi internet stabil.${hint}`
     );
     this.name = 'ApiConnectionError';
   }
@@ -71,6 +95,7 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
     response = await fetch(`${API_URL}${endpoint}`, {
       ...rest,
       headers,
+      credentials: 'include',
     });
   } catch {
     throw new ApiConnectionError();
