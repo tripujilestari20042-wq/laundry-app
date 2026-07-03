@@ -5,7 +5,7 @@ import { useParams, useSearchParams, useRouter, usePathname } from 'next/navigat
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/api';
-import { requestOrderCancellation } from '@/lib/orders';
+import { getOrderById, requestOrderCancellation, completeCashOrder } from '@/lib/orders';
 import { openMidtransSnap } from '@/lib/payments/midtrans';
 import AdminCancellationReview from '@/components/admin/AdminCancellationReview';
 import CancelRequestModal from '@/components/orders/CancelRequestModal';
@@ -47,26 +47,28 @@ function OrderDetailContent() {
 
   async function fetchOrder() {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+    const isAdmin = profile?.role === 'admin';
 
     try {
-      const res = await api.get<{ data: Order }>(`/api/orders/${orderId}`, session.access_token);
-      setOrder(res.data);
+      const data = await getOrderById(supabase, session.user.id, isAdmin, orderId);
+      setOrder(data as Order);
+      return;
     } catch {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          services (id, name, price, price_unit),
-          tracking_status (id, status, notes, created_at)
-        `)
-        .eq('id', orderId)
-        .single();
-
-      if (error || !data) {
+      try {
+        const res = await api.get<{ data: Order }>(`/api/orders/${orderId}`, session.access_token);
+        setOrder(res.data);
+      } catch {
         setOrder(null);
-      } else {
-        setOrder(data as Order);
       }
     } finally {
       setLoading(false);
@@ -157,6 +159,7 @@ function OrderDetailContent() {
   async function handleCompleteCash() {
     if (!order) return;
     setCompleting(true);
+    setMessage(null);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
@@ -168,8 +171,20 @@ function OrderDetailContent() {
       );
       setMessage(res.message);
       await fetchOrder();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Gagal menyelesaikan pesanan');
+    } catch (apiErr) {
+      try {
+        const res = await completeCashOrder(supabase, orderId);
+        setMessage(res.message);
+        await fetchOrder();
+      } catch (fallbackErr) {
+        setMessage(
+          fallbackErr instanceof Error
+            ? fallbackErr.message
+            : apiErr instanceof Error
+              ? apiErr.message
+              : 'Gagal menyelesaikan pesanan'
+        );
+      }
     } finally {
       setCompleting(false);
     }

@@ -18,6 +18,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const { user, supabase, supabaseResponse } = await updateSession(request);
 
+  // API routes handle auth sendiri (Bearer token / cookie) — jangan redirect ke /login
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse;
+  }
+
   const isPublic = PUBLIC_ROUTES.includes(pathname) || pathname.startsWith('/auth/');
   const isAuthRoute = AUTH_ROUTES.includes(pathname);
 

@@ -2,32 +2,49 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 function resolveApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, '') ?? '';
+
+  // Browser: deteksi host aktual (lebih andal daripada env saja)
+  if (typeof window !== 'undefined') {
+    const { hostname, origin } = window.location;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isVercelHost = hostname.includes('vercel.app');
+
+    if (isVercelHost) {
+      // Selalu pakai API Next.js same-origin di Vercel
+      return '';
+    }
+
+    if (isLocalhost) {
+      return configured || 'http://localhost:4000';
+    }
+
+    // Custom domain: backend eksternal jika dikonfigurasi
+    if (configured && !configured.includes('localhost') && !configured.includes('127.0.0.1')) {
+      if (configured === origin || configured.startsWith(origin)) {
+        return '';
+      }
+      return configured;
+    }
+
+    return '';
+  }
+
+  // SSR
   const isLocalBackend =
     !configured ||
     configured.includes('localhost') ||
     configured.includes('127.0.0.1');
 
-  // Production tanpa backend Railway — pakai API bawaan Next.js di Vercel (same origin)
   if (isLocalBackend && IS_PRODUCTION) {
-    if (typeof window !== 'undefined') {
-      return '';
-    }
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, '');
-    return appUrl ?? '';
+    return process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, '') ?? '';
   }
 
   return configured || 'http://localhost:4000';
 }
 
-const API_URL = resolveApiBaseUrl();
-const USING_LOCALHOST_API =
-  !process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.NEXT_PUBLIC_API_URL.includes('localhost') ||
-    process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1'));
-const USES_BUILTIN_VERCEL_API = IS_PRODUCTION && API_URL !== 'http://localhost:4000' &&
-  (!process.env.NEXT_PUBLIC_API_URL ||
-    process.env.NEXT_PUBLIC_API_URL.includes('localhost') ||
-    process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1'));
+function getApiBaseUrl(): string {
+  return resolveApiBaseUrl();
+}
 
 interface FetchOptions extends RequestInit {
   token?: string;
@@ -36,14 +53,10 @@ interface FetchOptions extends RequestInit {
 export class ApiConnectionError extends Error {
   readonly isConnectionError = true;
 
-  constructor(apiUrl: string = API_URL) {
+  constructor(apiUrl: string = getApiBaseUrl()) {
     const displayUrl = apiUrl || 'API Vercel';
-    const hint =
-      IS_PRODUCTION && USING_LOCALHOST_API && !USES_BUILTIN_VERCEL_API
-        ? ' Set NEXT_PUBLIC_API_URL di Vercel ke URL backend production (Railway/Render).'
-        : '';
     super(
-      `Tidak dapat terhubung ke server (${displayUrl}). Pastikan koneksi internet stabil.${hint}`
+      `Tidak dapat terhubung ke server (${displayUrl}). Pastikan koneksi internet stabil.`
     );
     this.name = 'ApiConnectionError';
   }
@@ -53,7 +66,7 @@ export function isApiConnectionError(err: unknown): boolean {
   if (err instanceof ApiConnectionError) return true;
   if (err instanceof Error) {
     return (
-      err.message.includes('Tidak dapat terhubung ke backend') ||
+      err.message.includes('Tidak dapat terhubung ke') ||
       err.message === 'Failed to fetch'
     );
   }
@@ -78,8 +91,13 @@ function parseApiError(json: unknown, status: number): string {
   return `Terjadi kesalahan pada server (HTTP ${status})`;
 }
 
-async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+async function apiFetch<T>(
+  endpoint: string,
+  options: FetchOptions = {},
+  baseUrl?: string
+): Promise<T> {
   const { token, headers: customHeaders, ...rest } = options;
+  const API_URL = baseUrl ?? getApiBaseUrl();
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -98,7 +116,10 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
       credentials: 'include',
     });
   } catch {
-    throw new ApiConnectionError();
+    if (baseUrl === undefined && typeof window !== 'undefined' && API_URL !== '') {
+      return apiFetch<T>(endpoint, options, '');
+    }
+    throw new ApiConnectionError(API_URL);
   }
 
   let json: unknown = null;
@@ -106,7 +127,10 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
   if (text) {
     const trimmed = text.trim();
     if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-      throw new Error('Endpoint API tidak ditemukan. Tunggu redeploy Vercel selesai.');
+      if (baseUrl === undefined && typeof window !== 'undefined' && API_URL !== '') {
+        return apiFetch<T>(endpoint, options, '');
+      }
+      throw new Error('Layanan API sementara tidak tersedia. Coba refresh halaman.');
     }
     try {
       json = JSON.parse(text);
@@ -116,6 +140,14 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
   }
 
   if (!response.ok) {
+    if (
+      response.status === 404 &&
+      baseUrl === undefined &&
+      typeof window !== 'undefined' &&
+      API_URL !== ''
+    ) {
+      return apiFetch<T>(endpoint, options, '');
+    }
     throw new Error(parseApiError(json, response.status));
   }
 
@@ -139,4 +171,4 @@ export const api = {
     apiFetch<T>(endpoint, { method: 'DELETE', token }),
 };
 
-export { API_URL };
+export { getApiBaseUrl as API_URL };

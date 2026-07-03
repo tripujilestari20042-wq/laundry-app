@@ -381,3 +381,46 @@ export async function rejectOrderCancellation(
     message: `Pengajuan pembatalan ditolak. Status kembali ke ${restoreStatus}.`,
   };
 }
+
+export async function completeCashOrder(supabase: SupabaseClient, orderId: string) {
+  const { data: existing, error: fetchError } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchError || !existing) {
+    throw new Error('Pesanan tidak ditemukan');
+  }
+
+  if (existing.payment_method !== 'cash') {
+    throw new Error('Fitur ini hanya untuk pesanan tunai');
+  }
+
+  if (existing.laundry_status === 'cancelled') {
+    throw new Error('Pesanan sudah dibatalkan');
+  }
+
+  if (existing.laundry_status === 'completed' && existing.payment_status === 'paid') {
+    throw new Error('Pesanan sudah selesai dan lunas');
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      payment_status: 'paid',
+      laundry_status: 'completed',
+    })
+    .eq('id', orderId)
+    .select(ORDER_SELECT)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    data,
+    message: 'Pesanan selesai dan pembayaran tunai dicatat sebagai lunas.',
+  };
+}
