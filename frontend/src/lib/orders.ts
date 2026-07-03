@@ -163,3 +163,63 @@ export async function createCustomerOrder(
 
   return data;
 }
+
+const CANCELLABLE_STATUSES = ['pending', 'pickup'] as const;
+
+export async function requestOrderCancellation(
+  supabase: SupabaseClient,
+  customerId: string,
+  orderId: string,
+  reason: string
+) {
+  const trimmedReason = reason.trim();
+  if (trimmedReason.length < 5) {
+    throw new Error('Alasan minimal 5 karakter');
+  }
+  if (trimmedReason.length > 500) {
+    throw new Error('Alasan maksimal 500 karakter');
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .eq('customer_id', customerId)
+    .single();
+
+  if (fetchError || !existing) {
+    throw new Error('Pesanan tidak ditemukan');
+  }
+
+  const status = existing.laundry_status as string;
+
+  if (status === 'pembatalan_diajukan') {
+    throw new Error('Pengajuan pembatalan sudah dikirim');
+  }
+
+  if (!CANCELLABLE_STATUSES.includes(status as (typeof CANCELLABLE_STATUSES)[number])) {
+    throw new Error('Pembatalan hanya bisa diajukan saat pesanan masih menunggu atau diambil kurir');
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      laundry_status: 'pembatalan_diajukan',
+      cancellation_reason: trimmedReason,
+      status_before_cancel: existing.laundry_status,
+    })
+    .eq('id', orderId)
+    .eq('customer_id', customerId)
+    .select(`
+      *,
+      services (id, name, price, price_unit),
+      profiles (id, full_name, email, phone)
+    `)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}

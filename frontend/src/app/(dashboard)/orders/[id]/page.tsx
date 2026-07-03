@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter, usePathname } from 'next/navigat
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/api';
+import { requestOrderCancellation } from '@/lib/orders';
 import { openMidtransSnap } from '@/lib/payments/midtrans';
 import AdminCancellationReview from '@/components/admin/AdminCancellationReview';
 import CancelRequestModal from '@/components/orders/CancelRequestModal';
@@ -114,8 +115,15 @@ function OrderDetailContent() {
 
   async function handleRequestCancel(reason: string) {
     setCancelling(true);
+    setMessage(null);
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      setCancelling(false);
+      return;
+    }
+
+    const successMessage =
+      'Pengajuan pembatalan berhasil dikirim. Menunggu persetujuan admin.';
 
     try {
       const res = await api.post<{ message: string }>(
@@ -123,11 +131,24 @@ function OrderDetailContent() {
         { reason },
         session.access_token
       );
-      setMessage(res.message);
+      setMessage(res.message || successMessage);
       setShowCancelModal(false);
       await fetchOrder();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Gagal mengajukan pembatalan');
+    } catch (apiErr) {
+      try {
+        await requestOrderCancellation(supabase, session.user.id, orderId, reason);
+        setMessage(successMessage);
+        setShowCancelModal(false);
+        await fetchOrder();
+      } catch (fallbackErr) {
+        const msg =
+          fallbackErr instanceof Error
+            ? fallbackErr.message
+            : apiErr instanceof Error
+              ? apiErr.message
+              : 'Gagal mengajukan pembatalan';
+        setMessage(msg);
+      }
     } finally {
       setCancelling(false);
     }
