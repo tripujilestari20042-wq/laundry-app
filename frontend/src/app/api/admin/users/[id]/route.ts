@@ -99,7 +99,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Tidak bisa menghapus akun sendiri' }, { status: 400 });
     }
 
-    const { data: orders } = await supabase
+    const adminClient = getSupabaseAdmin();
+
+    const { data: orders } = await adminClient
       .from('orders')
       .select('id')
       .eq('customer_id', id)
@@ -112,7 +114,6 @@ export async function DELETE(
       );
     }
 
-    const adminClient = getSupabaseAdmin();
     const { error: authError } = await adminClient.auth.admin.deleteUser(id);
 
     if (authError) {

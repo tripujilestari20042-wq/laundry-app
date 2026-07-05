@@ -17,12 +17,12 @@ export interface AuthResponse {
 export function formatAuthError(error: unknown): string {
   if (!error) return 'Terjadi kesalahan autentikasi';
   if (typeof error === 'string') {
-    return error === '{}' ? 'Autentikasi gagal. Periksa backend (port 4000) dan konfigurasi Supabase.' : error;
+    return error === '{}' ? 'Autentikasi gagal. Periksa email/password dan konfigurasi Supabase.' : error;
   }
   if (error instanceof Error) {
     const msg = error.message?.trim();
     if (!msg || msg === '{}') {
-      return 'Autentikasi gagal. Pastikan backend berjalan di http://localhost:4000 dan skema database Supabase sudah dijalankan.';
+      return 'Autentikasi gagal. Periksa email/password Anda atau coba login dengan Google.';
     }
     return msg;
   }
@@ -32,7 +32,7 @@ export function formatAuthError(error: unknown): string {
     if (typeof obj.error === 'string' && obj.error && obj.error !== '{}') return obj.error;
     const serialized = JSON.stringify(error);
     if (serialized === '{}' || serialized === 'null') {
-      return 'Autentikasi gagal. Periksa backend (port 4000) dan konfigurasi Supabase.';
+      return 'Autentikasi gagal. Periksa email/password Anda.';
     }
     return serialized;
   }

@@ -41,15 +41,11 @@ async function createCallbackClient() {
 
 async function trySyncRole(
   accessToken: string,
-  expectedRole: UserRole
+  expectedRole: UserRole,
+  origin: string
 ): Promise<{ ok: true; role: UserRole } | { ok: false; forbidden: boolean }> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl || apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
-    return { ok: false, forbidden: false };
-  }
-
   try {
-    const syncRes = await fetch(`${apiUrl.replace(/\/+$/, '')}/api/auth/sync-role`, {
+    const syncRes = await fetch(`${origin}/api/auth/sync-role`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -123,7 +119,7 @@ export async function GET(request: Request) {
     let profileRole: UserRole | undefined;
 
     if (expectedRole) {
-      const syncResult = await trySyncRole(session.access_token, expectedRole);
+      const syncResult = await trySyncRole(session.access_token, expectedRole, origin);
 
       if (syncResult.ok) {
         profileRole = syncResult.role;
