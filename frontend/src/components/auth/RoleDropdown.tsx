@@ -3,16 +3,19 @@
 import { ChevronDown } from 'lucide-react';
 import type { UserRole } from '@/types';
 
+export type RoleSelectValue = UserRole | '';
+
 const OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'pelanggan', label: 'Pelanggan' },
   { value: 'admin', label: 'Admin Laundry' },
 ];
 
 interface RoleDropdownProps {
-  value: UserRole;
-  onChange: (role: UserRole) => void;
+  value: RoleSelectValue;
+  onChange: (role: RoleSelectValue) => void;
   disabled?: boolean;
   label?: string;
+  placeholder?: string;
 }
 
 export default function RoleDropdown({
@@ -20,6 +23,7 @@ export default function RoleDropdown({
   onChange,
   disabled,
   label = 'Masuk / daftar sebagai',
+  placeholder = 'Pilih role',
 }: RoleDropdownProps) {
   return (
     <div>
@@ -30,10 +34,16 @@ export default function RoleDropdown({
         <select
           id="role-select"
           value={value}
-          onChange={(e) => onChange(e.target.value as UserRole)}
+          onChange={(e) => onChange(e.target.value as RoleSelectValue)}
           disabled={disabled}
-          className="w-full appearance-none px-4 py-3 pr-10 border border-slate-200 rounded-xl bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-shadow disabled:opacity-50 cursor-pointer"
+          required={value === ''}
+          className={`w-full appearance-none px-4 py-3 pr-10 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-shadow disabled:opacity-50 cursor-pointer ${
+            value === '' ? 'text-slate-400' : 'text-slate-800'
+          }`}
         >
+          <option value="" disabled>
+            {placeholder}
+          </option>
           {OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}

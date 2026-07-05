@@ -115,7 +115,14 @@ export default function RegisterPage() {
 
         <PasswordInput id="password" value={password} onChange={setPassword} label="Password" autoComplete="new-password" required minLength={6} />
 
-        <RoleDropdown value={role} onChange={setRole} disabled={loading} label="Daftar sebagai" />
+        <RoleDropdown
+          value={role}
+          onChange={(r) => {
+            if (r) setRole(r);
+          }}
+          disabled={loading}
+          label="Daftar sebagai"
+        />
 
         <button
           type="submit"

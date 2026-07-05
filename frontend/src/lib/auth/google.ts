@@ -19,7 +19,7 @@ export function getAppAuthCallbackUrl(): string {
   return `${appUrl}/auth/callback`;
 }
 
-export async function startGoogleOAuth(role: UserRole = 'pelanggan'): Promise<{ error?: string }> {
+export async function startGoogleOAuth(role?: UserRole): Promise<{ error?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -33,8 +33,10 @@ export async function startGoogleOAuth(role: UserRole = 'pelanggan'): Promise<{ 
   const redirectTo = getAppAuthCallbackUrl();
   const googleCallback = getSupabaseGoogleCallbackUrl();
 
-  if (typeof document !== 'undefined') {
+  if (role && typeof document !== 'undefined') {
     document.cookie = `auth_expected_role=${role}; path=/; max-age=600; SameSite=Lax`;
+  } else if (typeof document !== 'undefined') {
+    document.cookie = 'auth_expected_role=; path=/; max-age=0; SameSite=Lax';
   }
 
   const { createClient } = await import('@/lib/supabase/client');

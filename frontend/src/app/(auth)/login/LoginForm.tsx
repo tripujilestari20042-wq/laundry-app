@@ -6,13 +6,12 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import AuthLayout from '@/components/auth/AuthLayout';
 import GoogleButton from '@/components/auth/GoogleButton';
-import RoleDropdown from '@/components/auth/RoleDropdown';
+import RoleDropdown, { type RoleSelectValue } from '@/components/auth/RoleDropdown';
 import PasswordInput from '@/components/ui/PasswordInput';
 import { loginUser } from '@/lib/auth/api';
 import { formatAuthError } from '@/lib/auth/errors';
 import { isSafeRedirect } from '@/lib/auth/redirect';
 import { applyAuthSession, getRedirectForRole } from '@/lib/auth/session';
-import type { UserRole } from '@/types';
 
 interface LoginFormProps {
   initialError?: string | null;
@@ -24,7 +23,7 @@ export default function LoginForm({ initialError = null, redirectTo = null }: Lo
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('pelanggan');
+  const [role, setRole] = useState<RoleSelectValue>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
 
@@ -32,6 +31,12 @@ export default function LoginForm({ initialError = null, redirectTo = null }: Lo
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!role) {
+      setError('Silakan pilih role terlebih dahulu.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const result = await loginUser({ email, password, role });
@@ -58,7 +63,7 @@ export default function LoginForm({ initialError = null, redirectTo = null }: Lo
         </div>
       )}
 
-      <GoogleButton label="Masuk dengan Google" disabled={loading} role={role} onError={setError} />
+      <GoogleButton label="Masuk dengan Google" disabled={loading} onError={setError} />
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
@@ -100,7 +105,13 @@ export default function LoginForm({ initialError = null, redirectTo = null }: Lo
           </Link>
         </div>
 
-        <RoleDropdown value={role} onChange={setRole} disabled={loading} />
+        <RoleDropdown
+          value={role}
+          onChange={setRole}
+          disabled={loading}
+          label="Masuk sebagai"
+          placeholder="Pilih role"
+        />
 
         <button
           type="submit"

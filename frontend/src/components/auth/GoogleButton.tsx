@@ -7,6 +7,7 @@ import type { UserRole } from '@/types';
 interface GoogleButtonProps {
   label?: string;
   disabled?: boolean;
+  /** Hanya untuk registrasi — login Google tidak perlu role (diambil dari profil). */
   role?: UserRole;
   onError?: (message: string) => void;
 }
@@ -14,7 +15,7 @@ interface GoogleButtonProps {
 export default function GoogleButton({
   label = 'Lanjutkan dengan Google',
   disabled = false,
-  role = 'pelanggan',
+  role,
   onError,
 }: GoogleButtonProps) {
   async function handleGoogleAuth() {
