@@ -3,9 +3,10 @@ import { z } from 'zod';
 import {
   confirmAuthUserEmail,
   findAuthUserByEmail,
-  getAuthProviders,
   getProfileByUserId,
   isEmailConfirmed,
+  isOAuthOnlyAccount,
+  linkEmailPasswordForUser,
   mapLoginFailureMessage,
   roleLabel,
   signInWithEmailPassword,
@@ -15,7 +16,7 @@ import type { UserRole } from '@/types';
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
-  password: z.string().min(1, 'Password wajib diisi'),
+  password: z.string().min(6, 'Password minimal 6 karakter'),
   role: z.enum(['admin', 'pelanggan']).optional(),
 });
 
@@ -39,11 +40,14 @@ export async function POST(request: Request) {
       const authUser = await findAuthUserByEmail(email);
 
       if (authUser) {
-        const providers = getAuthProviders(authUser);
-        const hasEmailProvider = providers.includes('email');
-
-        if (hasEmailProvider && !isEmailConfirmed(authUser)) {
+        if (!isEmailConfirmed(authUser)) {
           await confirmAuthUserEmail(authUser.id);
+          signIn = await signInWithEmailPassword(email, password);
+        }
+
+        // Akun Google/OAuth: tautkan password dari form login agar bisa masuk via email
+        if (!signIn.ok && isOAuthOnlyAccount(authUser)) {
+          await linkEmailPasswordForUser(authUser.id, password);
           signIn = await signInWithEmailPassword(email, password);
         }
       }

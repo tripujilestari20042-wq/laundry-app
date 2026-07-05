@@ -100,6 +100,20 @@ export async function signInWithEmailPassword(email: string, password: string) {
   return { ok: true as const, session: data.session, user: data.user };
 }
 
+export function isOAuthOnlyAccount(user: User): boolean {
+  const providers = getAuthProviders(user);
+  return !providers.includes('email');
+}
+
+export async function linkEmailPasswordForUser(userId: string, password: string) {
+  const admin = getSupabaseAdmin();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password,
+    email_confirm: true,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export function roleLabel(role: UserRole): string {
   return role === 'admin' ? 'Admin Laundry' : 'Pelanggan';
 }
@@ -114,16 +128,8 @@ export function mapLoginFailureMessage(params: {
     return 'Email atau password salah. Pastikan akun sudah terdaftar.';
   }
 
-  const providers = getAuthProviders(authUser);
-  const hasEmailProvider = providers.includes('email');
-  const hasGoogleOnly = providers.includes('google') && !hasEmailProvider;
-
-  if (hasGoogleOnly) {
-    return 'Akun ini didaftarkan via Google. Gunakan tombol "Masuk dengan Google", atau atur password lewat "Lupa password".';
-  }
-
   if (!isEmailConfirmed(authUser)) {
-    return 'Email belum diverifikasi. Coba login lagi — sistem akan mengaktifkan akun otomatis, atau cek inbox Anda.';
+    return 'Email belum diverifikasi. Coba login lagi — sistem akan mengaktifkan akun otomatis.';
   }
 
   return 'Email atau password salah.';
