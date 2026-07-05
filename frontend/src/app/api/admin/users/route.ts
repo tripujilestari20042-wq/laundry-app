@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/supabase/route-auth';
 import { requireAdmin, AdminAccessError } from '@/lib/supabase/admin-auth';
 import { getSupabaseAdmin } from '@/lib/supabase/admin-client';
+import { upsertProfile } from '@/lib/auth/server-auth';
 
 const createUserSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -80,19 +81,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
+    await upsertProfile({
+      id: authData.user.id,
+      email,
+      full_name,
+      phone: phone ?? null,
+      role,
+    });
+
     const { data, error } = await admin
       .from('profiles')
-      .upsert(
-        {
-          id: authData.user.id,
-          email,
-          full_name,
-          phone: phone ?? null,
-          role,
-        },
-        { onConflict: 'id' }
-      )
-      .select()
+      .select('*')
+      .eq('id', authData.user.id)
       .single();
 
     if (error || !data) {

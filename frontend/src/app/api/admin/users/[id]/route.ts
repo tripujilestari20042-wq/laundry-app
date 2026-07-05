@@ -101,24 +101,45 @@ export async function DELETE(
 
     const adminClient = getSupabaseAdmin();
 
-    const { data: orders } = await adminClient
+    const { data: orders, error: ordersError } = await adminClient
       .from('orders')
       .select('id')
       .eq('customer_id', id)
       .limit(1);
 
+    if (ordersError) {
+      return NextResponse.json({ error: ordersError.message }, { status: 500 });
+    }
+
     if (orders && orders.length > 0) {
       return NextResponse.json(
-        { error: 'Pengguna memiliki riwayat pesanan. Nonaktifkan atau ubah role saja.' },
+        {
+          error:
+            'Pengguna memiliki riwayat pesanan sehingga tidak bisa dihapus. Ubah role atau biarkan akun tetap ada.',
+        },
         { status: 400 }
       );
     }
 
+    await adminClient.from('notifications').delete().eq('user_id', id);
+
     const { error: authError } = await adminClient.auth.admin.deleteUser(id);
 
     if (authError) {
+      const msg = authError.message.toLowerCase();
+      if (msg.includes('foreign key') || msg.includes('violates')) {
+        return NextResponse.json(
+          {
+            error:
+              'Pengguna masih terhubung ke data lain di database. Hapus pesanan terkait terlebih dahulu.',
+          },
+          { status: 400 }
+        );
+      }
       return NextResponse.json({ error: authError.message }, { status: 500 });
     }
+
+    await adminClient.from('profiles').delete().eq('id', id);
 
     return NextResponse.json({ message: 'Pengguna berhasil dihapus' });
   } catch (err) {
@@ -126,6 +147,7 @@ export async function DELETE(
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
     const message = err instanceof Error ? err.message : 'Gagal menghapus pengguna';
-    return NextResponse.json({ error: message }, { status: 400 });
+    const status = message.includes('SUPABASE_SERVICE_ROLE_KEY') ? 503 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
