@@ -11,6 +11,7 @@ import PasswordInput from '@/components/ui/PasswordInput';
 import { registerUser } from '@/lib/auth/api';
 import { formatAuthError } from '@/lib/auth/errors';
 import { applyAuthSession, getRedirectForRole } from '@/lib/auth/session';
+import { BRAND } from '@/lib/brand';
 import type { UserRole } from '@/types';
 
 export default function RegisterPage() {
@@ -75,7 +76,7 @@ export default function RegisterPage() {
     'w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-shadow';
 
   return (
-    <AuthLayout title="Buat Akun Baru" subtitle="Lengkapi data di bawah untuk mulai menggunakan LaundryApp.">
+    <AuthLayout title="Buat Akun Baru" subtitle={`Lengkapi data di bawah untuk mulai menggunakan ${BRAND.name}.`}>
       {error && (
         <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">
           {error}

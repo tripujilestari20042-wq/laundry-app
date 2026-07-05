@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import SidebarShell from '@/components/layout/SidebarShell';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import { BRAND } from '@/lib/brand';
 
 const ADMIN_NAV = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -28,7 +29,7 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ fullName, children }: AdminSidebarProps) {
   return (
     <SidebarShell
-      title="LaundryApp"
+      title={BRAND.name}
       subtitle="Panel Admin"
       nav={ADMIN_NAV}
       fullName={fullName}

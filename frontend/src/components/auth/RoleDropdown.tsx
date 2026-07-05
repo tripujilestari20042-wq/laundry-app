@@ -7,7 +7,7 @@ export type RoleSelectValue = UserRole | '';
 
 const OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'pelanggan', label: 'Pelanggan' },
-  { value: 'admin', label: 'Admin Laundry' },
+  { value: 'admin', label: 'Admin Pulesin' },
 ];
 
 interface RoleDropdownProps {

@@ -56,60 +56,60 @@ export default function CustomerDashboardView({
   const progress = activeOrder ? getTrackerProgress(activeOrder.laundry_status) : 0;
 
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className="animate-fade-in space-y-10">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 via-primary-700 to-indigo-800 p-6 sm:p-8 text-white shadow-xl shadow-primary-200">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-600 to-lavender-600 p-8 sm:p-10 text-white shadow-xl shadow-primary-200/40">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl" />
         <div className="relative z-10">
           <p className="text-primary-100 text-sm font-medium">Selamat datang kembali</p>
-          <h1 className="text-2xl sm:text-3xl font-bold mt-1">{fullName}! 👋</h1>
-          <p className="text-primary-100/90 mt-2 max-w-lg">
-            Kelola pesanan laundry Anda dengan mudah. Cek status cucian, buat pesanan baru, atau lihat riwayat transaksi.
+          <h1 className="text-2xl sm:text-3xl font-bold mt-2">{fullName}! 👋</h1>
+          <p className="text-white/85 mt-3 max-w-lg leading-relaxed">
+            Kelola pesanan cucian dengan tenang. Cek status, buat pesanan baru, atau lihat riwayat transaksi.
           </p>
-          <div className="flex flex-wrap gap-4 mt-6">
-            <div className="bg-white/15 backdrop-blur rounded-xl px-4 py-2">
+          <div className="flex flex-wrap gap-4 mt-8">
+            <div className="bg-white/15 backdrop-blur rounded-2xl px-5 py-3 min-w-[120px]">
               <p className="text-xs text-primary-100">Pesanan Aktif</p>
-              <p className="text-xl font-bold">{activeCount}</p>
+              <p className="text-2xl font-bold mt-0.5">{activeCount}</p>
             </div>
-            <div className="bg-white/15 backdrop-blur rounded-xl px-4 py-2">
+            <div className="bg-white/15 backdrop-blur rounded-2xl px-5 py-3 min-w-[120px]">
               <p className="text-xs text-primary-100">Total Pesanan</p>
-              <p className="text-xl font-bold">{totalCount}</p>
+              <p className="text-2xl font-bold mt-0.5">{totalCount}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-5">
         <Link
           href="/orders/new"
-          className="group flex items-center gap-4 bg-white border-2 border-primary-100 rounded-2xl p-5 hover:border-primary-400 hover:shadow-lg hover:shadow-primary-100 transition-all"
+          className="group flex items-center gap-5 card-pulesin p-6 hover:border-primary-200 hover:shadow-lg hover:shadow-primary-100/50 transition-all"
         >
-          <span className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-600 text-white group-hover:scale-105 transition-transform">
-            <PlusCircle className="w-7 h-7" />
+          <span className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 text-white group-hover:scale-105 transition-transform shadow-md shadow-primary-200/40">
+            <PlusCircle className="w-7 h-7" strokeWidth={1.75} />
           </span>
           <div>
-            <p className="font-bold text-slate-900 text-lg">Pesan Laundry</p>
-            <p className="text-sm text-slate-500">Buat pesanan baru dengan peta & pembayaran</p>
+            <p className="font-bold text-slate-800 text-lg">Pesan Cucian</p>
+            <p className="text-sm text-slate-500 mt-1 leading-relaxed">Buat pesanan baru dengan peta & pembayaran</p>
           </div>
         </Link>
         <Link
           href="/orders"
-          className="group flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300 hover:shadow-md transition-all"
+          className="group flex items-center gap-5 card-pulesin p-6 hover:border-lavender-200 hover:shadow-md transition-all"
         >
-          <span className="flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-100 text-slate-600 group-hover:bg-slate-200 transition-colors">
-            <ClipboardList className="w-7 h-7" />
+          <span className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-lavender-100 to-primary-100 text-lavender-700 group-hover:scale-105 transition-transform">
+            <ClipboardList className="w-7 h-7" strokeWidth={1.75} />
           </span>
           <div>
-            <p className="font-bold text-slate-900 text-lg">Riwayat Transaksi</p>
-            <p className="text-sm text-slate-500">Lihat semua pesanan & status pembayaran</p>
+            <p className="font-bold text-slate-800 text-lg">Riwayat Transaksi</p>
+            <p className="text-sm text-slate-500 mt-1 leading-relaxed">Lihat semua pesanan & status pembayaran</p>
           </div>
         </Link>
       </div>
 
       {/* Order Tracker */}
       {activeOrder && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <div className="card-pulesin p-7 sm:p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-bold text-slate-900">Pelacak Pesanan Aktif</h2>
@@ -127,8 +127,7 @@ export default function CustomerDashboardView({
 
           <div className="relative">
             <div className="absolute top-5 left-0 right-0 h-1 bg-slate-100 rounded-full mx-8" />
-            <div
-              className="absolute top-5 left-0 h-1 bg-primary-500 rounded-full mx-8 transition-all duration-500"
+            <div className="absolute top-5 left-0 h-1 bg-gradient-to-r from-primary-400 to-lavender-400 rounded-full mx-8 transition-all duration-500"
               style={{ width: `${Math.max(0, ((progress - 1) / 3) * 100)}%`, maxWidth: 'calc(100% - 4rem)' }}
             />
             <div className="relative grid grid-cols-4 gap-2">
@@ -167,7 +166,7 @@ export default function CustomerDashboardView({
       )}
 
       {/* Recent Orders */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="card-pulesin overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900 flex items-center gap-2">
             <Package className="w-4 h-4 text-primary-600" />

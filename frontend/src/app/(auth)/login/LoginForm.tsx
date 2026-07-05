@@ -56,7 +56,7 @@ export default function LoginForm({ initialError = null, redirectTo = null }: Lo
   }
 
   return (
-    <AuthLayout title="Masuk ke Akun" subtitle="Selamat datang kembali! Kelola laundry Anda dengan mudah.">
+    <AuthLayout title="Masuk ke Akun" subtitle={`Selamat datang kembali! Kelola cucian Anda dengan tenang di Pulesin.`}>
       {error && (
         <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">
           {error}

@@ -1,12 +1,16 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+import { BRAND } from '@/lib/brand';
 
-const inter = Inter({ subsets: ['latin'] });
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
 
 export const metadata: Metadata = {
-  title: 'LaundryApp — Cuci Bersih, Antar Jemput',
-  description: 'Aplikasi laundry online dengan layanan antar-jemput',
+  title: `${BRAND.name} — ${BRAND.tagline}`,
+  description: BRAND.description,
 };
 
 export default function RootLayout({
@@ -16,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className={inter.className}>{children}</body>
+      <body className={plusJakarta.className}>{children}</body>
     </html>
   );
 }
