@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/supabase/route-auth';
 import { fetchStoreSettings, defaultStoreFromEnv } from '@/lib/catalog';
 import { requireAdmin, AdminAccessError } from '@/lib/supabase/admin-auth';
+
+const updateStoreSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  address: z.string().min(1, 'Alamat wajib diisi'),
+  delivery_fee_per_km: z.number().min(500, 'Biaya antar-jemput minimal Rp 500 per KM'),
+});
 
 export async function GET() {
   try {
@@ -26,15 +34,25 @@ export async function PUT(request: Request) {
     await requireAdmin(supabase, user.id);
 
     const body = await request.json();
+    const parsed = updateStoreSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors[0]?.message || 'Data tidak valid' },
+        { status: 400 }
+      );
+    }
+
+    const { lat, lng, address, delivery_fee_per_km } = parsed.data;
+
     const { data, error } = await supabase
       .from('store_settings')
       .upsert(
         {
           id: 1,
-          lat: body.lat,
-          lng: body.lng,
-          address: body.address,
-          delivery_fee_per_km: body.delivery_fee_per_km,
+          lat,
+          lng,
+          address,
+          delivery_fee_per_km,
           updated_by: user.id,
           updated_at: new Date().toISOString(),
         },
@@ -44,7 +62,10 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) throw new Error(error.message);
-    return NextResponse.json({ data });
+    return NextResponse.json({
+      data,
+      message: 'Pengaturan toko berhasil disimpan',
+    });
   } catch (err) {
     if (err instanceof AdminAccessError) {
       return NextResponse.json({ error: err.message }, { status: 403 });

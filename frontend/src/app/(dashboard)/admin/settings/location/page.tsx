@@ -46,8 +46,14 @@ export default function AdminStoreLocationPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+
     if (!coords || !address.trim()) {
-      setMessage({ type: 'error', text: 'Cari dan pilih alamat laundry terlebih dahulu' });
+      setMessage({ type: 'error', text: 'Cari dan pilih alamat toko terlebih dahulu' });
+      return;
+    }
+
+    if (!Number.isFinite(feePerKm) || feePerKm < 500) {
+      setMessage({ type: 'error', text: 'Biaya antar-jemput minimal Rp 500 per KM' });
       return;
     }
 
@@ -63,15 +69,23 @@ export default function AdminStoreLocationPage() {
 
     try {
       await api.put(
-        '/api/store/settings',
-        { lat: coords.lat, lng: coords.lng, address, delivery_fee_per_km: feePerKm },
+        '/api/config/store',
+        {
+          lat: coords.lat,
+          lng: coords.lng,
+          address: address.trim(),
+          delivery_fee_per_km: feePerKm,
+        },
         session.access_token
       );
-      setMessage({ type: 'success', text: 'Lokasi toko berhasil disimpan permanen ke database!' });
+      setMessage({
+        type: 'success',
+        text: 'Pengaturan lokasi toko dan biaya antar-jemput berhasil disimpan.',
+      });
     } catch (err) {
       setMessage({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Gagal menyimpan lokasi',
+        text: err instanceof Error ? err.message : 'Gagal menyimpan pengaturan',
       });
     } finally {
       setSaving(false);
@@ -151,11 +165,16 @@ export default function AdminStoreLocationPage() {
           <input
             type="number"
             value={feePerKm}
-            onChange={(e) => setFeePerKm(parseFloat(e.target.value))}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              if (Number.isFinite(next)) setFeePerKm(next);
+            }}
             min={500}
             step={500}
+            required
             className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
           />
+          <p className="text-xs text-slate-400 mt-2">Disimpan bersama lokasi toko saat klik Simpan.</p>
         </div>
 
         <button
@@ -164,7 +183,7 @@ export default function AdminStoreLocationPage() {
           className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-200 active:scale-[0.98] disabled:opacity-50 transition-all"
         >
           {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-          {saving ? 'Menyimpan...' : 'Simpan Lokasi Toko'}
+          {saving ? 'Menyimpan...' : 'Simpan'}
         </button>
       </form>
     </div>
